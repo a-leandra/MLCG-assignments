@@ -78,13 +78,20 @@ class IntersectionIntegrator(Integrator):
 
 class DepthIntegrator(Integrator):
 
-    def __init__(self, filename_, max_depth_=10):
+    def __init__(self, filename_, max_depth_=5):
         super().__init__(filename_ + '_Depth')
         self.max_depth = max_depth_
 
     def compute_color(self, ray):
         # ASSIGNMENT 1.3: PUT YOUR CODE HERE
-        pass
+        hit_data = self.scene.closest_hit(ray)  # Get closest intersection data
+        if hit_data.has_hit:  # Check if there's an intersection
+            # Calculate gray-scale value based on distance
+            depth_color = max(1 - hit_data.hit_distance / self.max_depth, 0)
+            # Use the gray-scale value for all color components
+            return RGBColor(depth_color, depth_color, depth_color)
+        else:
+            return BLACK  # Black color if no intersection
 
 
 class NormalIntegrator(Integrator):
@@ -94,7 +101,14 @@ class NormalIntegrator(Integrator):
 
     def compute_color(self, ray):
         # ASSIGNMENT 1.3: PUT YOUR CODE HERE
-        pass
+        hit_data = self.scene.closest_hit(ray)  # Get closest intersection data
+        if hit_data.has_hit:  # Check if there's an intersection
+            # Calculate color based on the normal vector
+            normal = hit_data.normal
+            color = (normal + Vector3D(1, 1, 1)) / 2
+            return RGBColor(color.x, color.y, color.z)
+        else:
+            return BLACK  # Black color if no intersection
 
 
 class PhongIntegrator(Integrator):
