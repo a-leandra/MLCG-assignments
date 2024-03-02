@@ -36,7 +36,7 @@ class Integrator(ABC):
         print('Rendering Image: ' + self.get_filename())
         for x in range(0, cam.width):
             for y in range(0, cam.height):
-                pixel = GREEN
+                pixel = RGBColor(x / cam.width, y / cam.height, 0)
                 self.scene.set_pixel(pixel, x, y)  # save pixel to pixel array
             progress = (x / cam.width) * 100
             print('\r\tProgress: ' + str(progress) + '%', end='')
