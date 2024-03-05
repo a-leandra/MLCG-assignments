@@ -118,6 +118,19 @@ class PhongIntegrator(Integrator):
 
     def compute_color(self, ray):
         # ASSIGNMENT 1.4: PUT YOUR CODE HERE
+        hit_data = self.scene.closest_hit(ray)
+
+        kd = 1
+        l = 1
+        light_pos = self.scene.point_lights[0] 
+        normal = hit_data.normal
+        distance = hit_data.distance
+        vertex_pos = hit_data.hit_point
+        light_vec =  Normalize(light_pos - vertex_pos)
+        c = (normal + Vector3D(1, 1, 1)) / 2
+        color2 = RGBColor(c.x, c.y, c.z)
+
+        lambert = max(Dot(normal, light_vec), 0.0) * kd * l / pow(distance) * color2
         pass
 
 
