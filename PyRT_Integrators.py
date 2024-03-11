@@ -1,4 +1,5 @@
 from PyRT_Common import *
+from PyRT_Core import *
 from random import randint
 
 
@@ -115,38 +116,44 @@ class PhongIntegrator(Integrator):
 
     def __init__(self, filename_):
         super().__init__(filename_ + '_Phong')
-        # Default material properties (adjust as needed)
-        self.kd = RGBColor(0.8, 0.8, 0.8)  # Diffuse coefficient
-        self.ks = RGBColor(0.5, 0.5, 0.5)  # Specular coefficient
-        self.specular_exponent = 50  # Shininess
+        self.specular_exponent = 50  # Shininess coefficient
 
     def compute_color(self, ray):
         # ASSIGNMENT 1.4: PUT YOUR CODE HERE
+        color = RGBColor(0.0, 0.0, 0.0)  # Start with black, add light contributions
         hit_data = self.scene.closest_hit(ray)
+
         if hit_data.has_hit:
-            color = self.scene.i_a.multiply(self.kd)  # Ambient component
-            
+            # Start with ambient light
+            color += self.scene.i_a
+
+            # Compute for each light
             for light in self.scene.pointLights:
+                # Check for shadows first
+                shadow_ray = Ray(hit_data.hit_point, Normalize(light.pos - hit_data.hit_point))
+                if self.scene.any_hit(shadow_ray):
+                    continue  # Skip this light source if shadowed
+
+                # Calculate vectors needed for Phong model
                 L = Normalize(light.pos - hit_data.hit_point)
                 N = hit_data.normal
-                V = Normalize(Vector3D(-ray.d.x, -ray.d.y, -ray.d.z))  # Adjusted line
+                V = Normalize(Vector3D(-ray.d.x, -ray.d.y, -ray.d.z))
                 R = Normalize(N * 2 * Dot(N, L) - L)
-                
-                # Diffuse component
-                diffuse_intensity = max(Dot(L, N), 0)
-                diffuse_component = light.intensity.multiply(self.kd) * diffuse_intensity
-                
+
+                # Diffuse component using Lambertian reflection
+                diffuse_intensity = max(Dot(N, L), 0)
+                kd = RGBColor(1.0, 1.0, 1.0)
+                color += light.intensity.multiply(kd) * diffuse_intensity
+
                 # Specular component
                 specular_intensity = max(Dot(V, R), 0) ** self.specular_exponent
-                specular_component = light.intensity.multiply(self.ks) * specular_intensity
-                
-                color += diffuse_component + specular_component
-                
-            color.clamp(0.0, 1.0)
-            return color
+                ks = RGBColor(1.0, 1.0, 1.0)
+                color += light.intensity.multiply(ks) * specular_intensity
+
         else:
-            # Return background or black if no hit
-            return self.scene.env_map.getValue(ray.d) if self.scene.env_map else BLACK
+            color = BLACK
+
+        return color
 
 
 class CMCIntegrator(Integrator):  # Classic Monte Carlo Integrator
