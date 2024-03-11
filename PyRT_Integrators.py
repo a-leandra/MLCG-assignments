@@ -155,7 +155,6 @@ class PhongIntegrator(Integrator):
 
         return color
 
-
 class CMCIntegrator(Integrator):  # Classic Monte Carlo Integrator
 
     def __init__(self, n, filename_, experiment_name=''):
