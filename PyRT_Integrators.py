@@ -121,34 +121,42 @@ class PhongIntegrator(Integrator):
     def compute_color(self, ray):
         # ASSIGNMENT 1.4: PUT YOUR CODE HERE
         color = RGBColor(0.0, 0.0, 0.0)  # Start with black, add light contributions
+
         hit_data = self.scene.closest_hit(ray)
+        #normal = hit_data.normal
+        #normal_color = (normal + Vector3D(1, 1, 1)) / 2
+        #color = RGBColor(normal_color.x, normal_color.y, normal_color.z)
 
         if hit_data.has_hit:
             # Start with ambient light
             color += self.scene.i_a
 
+
             # Compute for each light
             for light in self.scene.pointLights:
+            # Calculate vectors needed for Phong model
+                light_vector = light.pos - hit_data.hit_point
+                light_distance = Length(light_vector)
+                L = Normalize(light_vector)
+                N = hit_data.normal
                 # Check for shadows first
-                shadow_ray = Ray(hit_data.hit_point, Normalize(light.pos - hit_data.hit_point))
+                shadow_ray = Ray(hit_data.hit_point, Normalize(light.pos - hit_data.hit_point), light_distance)
                 if self.scene.any_hit(shadow_ray):
                     continue  # Skip this light source if shadowed
 
-                # Calculate vectors needed for Phong model
-                L = Normalize(light.pos - hit_data.hit_point)
-                N = hit_data.normal
-                V = Normalize(Vector3D(-ray.d.x, -ray.d.y, -ray.d.z))
-                R = Normalize(N * 2 * Dot(N, L) - L)
+                #V = Normalize(Vector3D(-ray.d.x, -ray.d.y, -ray.d.z))
+                #R = N * 2 * Dot(N, L) - L
 
                 # Diffuse component using Lambertian reflection
-                diffuse_intensity = max(Dot(N, L), 0)
-                kd = RGBColor(1.0, 1.0, 1.0)
-                color += light.intensity.multiply(kd) * diffuse_intensity
+                #diffuse_intensity = max(Dot(N, L), 0)
+                #//kd = RGBColor(1.0, 1.0, 1.0)
+                kd = self.scene.object_list[hit_data.primitive_index].get_BRDF().get_value(light_vector, None, N)
+                color +=  light.intensity.multiply(kd)/pow(light_distance, 2) #* diffuse_intensity
 
                 # Specular component
-                specular_intensity = max(Dot(V, R), 0) ** self.specular_exponent
-                ks = RGBColor(1.0, 1.0, 1.0)
-                color += light.intensity.multiply(ks) * specular_intensity
+                #specular_intensity = max(Dot(V, R), 0) ** self.specular_exponent
+                #ks = RGBColor(1.0, 1.0, 1.0)
+                #color += light.intensity.multiply(ks) * specular_intensity
 
         else:
             color = BLACK
