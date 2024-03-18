@@ -149,6 +149,7 @@ class PhongIntegrator(Integrator):
         # ASSIGNMENT 1.4: PUT YOUR CODE HERE
         color = RGBColor(0.0, 0.0, 0.0)  # Start with black, add light contributions
 
+
         hit_data = self.scene.closest_hit(ray)
 
         if hit_data.has_hit:
