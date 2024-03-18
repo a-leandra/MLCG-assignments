@@ -118,9 +118,10 @@ class PhongIntegrator(Integrator):
         super().__init__(filename_ + '_Phong')
         self.specular_exponent = 50  # Shininess coefficient
 
-    def compute_color(self, ray):
+    def compute_color2(self, ray):
         # ASSIGNMENT 1.4: PUT YOUR CODE HERE
         color = RGBColor(0.0, 0.0, 0.0)  # Start with black, add light contributions
+
         hit_data = self.scene.closest_hit(ray)
 
         if hit_data.has_hit:
@@ -129,28 +130,48 @@ class PhongIntegrator(Integrator):
 
             # Compute for each light
             for light in self.scene.pointLights:
+                # Calculate vectors needed for Phong model
+                light_vector = light.pos - hit_data.hit_point
+                light_distance = Length(light_vector)
+                L = Normalize(light_vector)
+                N = hit_data.normal
+
+                # Diffuse component using Lambertian reflection
+                kd = self.scene.object_list[hit_data.primitive_index].get_BRDF().get_value(light_vector, None, N)
+                color += light.intensity.multiply(kd) / (light_distance * light_distance)
+
+        else:
+            color = BLACK
+
+        return color
+
+    def compute_color(self, ray):
+        # ASSIGNMENT 1.4: PUT YOUR CODE HERE
+        color = RGBColor(0.0, 0.0, 0.0)  # Start with black, add light contributions
+
+        hit_data = self.scene.closest_hit(ray)
+
+        if hit_data.has_hit:
+            # Start with ambient light
+            color += self.scene.i_a
+
+            # Compute for each light
+            for light in self.scene.pointLights:
+                light_vector = light.pos - hit_data.hit_point # (d) calculate the distance from the hit point to the light source
+                light_distance = Length(light_vector)
+                L = Normalize(light_vector)
+                N = hit_data.normal
+
                 # Check for shadows first
-                shadow_ray = Ray(hit_data.hit_point, Normalize(light.pos - hit_data.hit_point))
+                shadow_ray = Ray(hit_data.hit_point, L, tmax=light_distance) # set tmax to d
                 if self.scene.any_hit(shadow_ray):
                     continue  # Skip this light source if shadowed
 
-                # Calculate vectors needed for Phong model
-                L = Normalize(light.pos - hit_data.hit_point)
-                N = hit_data.normal
-                V = Normalize(Vector3D(-ray.d.x, -ray.d.y, -ray.d.z))
-                R = Normalize(N * 2 * Dot(N, L) - L)
-
                 # Diffuse component using Lambertian reflection
-                diffuse_intensity = max(Dot(N, L), 0)
-                kd = RGBColor(1.0, 1.0, 1.0)
-                color += light.intensity.multiply(kd) * diffuse_intensity
-
-                # Specular component
-                specular_intensity = max(Dot(V, R), 0) ** self.specular_exponent
-                ks = RGBColor(1.0, 1.0, 1.0)
-                color += light.intensity.multiply(ks) * specular_intensity
-
+                kd = self.scene.object_list[hit_data.primitive_index].get_BRDF().get_value(light_vector, None, N)
+                color += light.intensity.multiply(kd) / (light_distance * light_distance) # Li / d^2
         else:
+            # Return black if no hit
             color = BLACK
 
         return color
