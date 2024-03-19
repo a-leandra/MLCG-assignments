@@ -154,7 +154,8 @@ class PhongIntegrator(Integrator):
 
         if hit_data.has_hit:
             # Start with ambient light
-            color += self.scene.i_a
+            ka = self.scene.object_list[hit_data.primitive_index].get_BRDF().kd
+            color += self.scene.i_a.multiply(ka)
 
             # Compute for each light
             for light in self.scene.pointLights:
@@ -162,14 +163,15 @@ class PhongIntegrator(Integrator):
                 light_distance = Length(light_vector)
                 L = Normalize(light_vector)
                 N = hit_data.normal
+                kd = self.scene.object_list[hit_data.primitive_index].get_BRDF().get_value(light_vector, None, N)
 
                 # Check for shadows first
                 shadow_ray = Ray(hit_data.hit_point, L, tmax=light_distance) # set tmax to d
+
                 if self.scene.any_hit(shadow_ray):
                     continue  # Skip this light source if shadowed
-
+                
                 # Diffuse component using Lambertian reflection
-                kd = self.scene.object_list[hit_data.primitive_index].get_BRDF().get_value(light_vector, None, N)
                 color += light.intensity.multiply(kd) / (light_distance * light_distance) # Li / d^2
         else:
             # Return black if no hit
