@@ -79,6 +79,7 @@ print('Ground truth: ' + str(ground_truth))
 ns_min = 20  # minimum number of samples (ns) used for the Monte Carlo estimate
 ns_max = 101  # maximum number of samples (ns) used for the Monte Carlo estimate
 ns_step = 20  # step for the number of samples
+estimates_per_sample_count = 1000
 ns_vector = np.arange(start=ns_min, stop=ns_max, step=ns_step)  # the number of samples to use per estimate
 n_estimates = 1  # the number of estimates to perform for each value in ns_vector
 n_samples_count = len(ns_vector)
@@ -96,10 +97,13 @@ for k, ns in enumerate(ns_vector):
     print(f'Computing estimates using {ns} samples')
 
     for _ in range(n_estimates):
-        sample_set, sample_prob = sample_set_hemisphere(ns, uniform_pdf)
-        sample_values = collect_samples(integrand, sample_set)
-        estimate = compute_estimate_cmc(sample_prob, sample_values)
-        error_sum += abs(ground_truth - estimate)
+        estimate_error_sum = 0.0
+        for _ in range (estimates_per_sample_count):
+            sample_set, sample_prob = sample_set_hemisphere(ns, uniform_pdf)
+            sample_values = collect_samples(integrand, sample_set)
+            estimate = compute_estimate_cmc(sample_prob, sample_values)
+            estimate_error_sum += abs(ground_truth - estimate)
+        error_sum += estimate_error_sum/estimates_per_sample_count
     
     avg_error = error_sum / n_estimates
     results[k, 0] = avg_error
@@ -112,4 +116,5 @@ for k in range(len(methods_label)):
     method = methods_label[k]
     plt.plot(ns_vector, results[:, k], label=method[0], marker=method[1])
 plt.legend()
+plt.savefig('figure.png')  # Save figure to file
 plt.show()
