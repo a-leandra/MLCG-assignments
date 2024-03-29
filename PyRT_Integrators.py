@@ -1,6 +1,7 @@
 from PyRT_Common import *
 from PyRT_Core import *
 from random import randint
+from AppWorkbench import *
 
 
 # -------------------------------------------------
@@ -163,7 +164,26 @@ class CMCIntegrator(Integrator):  # Classic Monte Carlo Integrator
         self.n_samples = n
 
     def compute_color(self, ray):
-        pass
+        #color = RGBColor(0.0, 0.0, 0.0)  # Start with black, add light contributions
+        hit_data = self.scene.closest_hit(ray) # NOT SURE ABOUT THIS
+        normal = hit_data.normal
+
+        sample_set, sample_prob = sample_set_hemisphere(ns, uniform_pdf)
+        sample_values = collect_samples(integrand, sample_set)
+
+        emission_sum = 0.0
+        for i in range(len(sample_values)):
+            wj = center_around_normal(sample_values[i], normal)
+            r_wj = Ray(wj)
+            r_hit_data = self.scene.closest_hit(r_wj)
+
+            if(r_hit_data.has_hit):
+                Li_wj = hit_data.hit_point.emission # NOT SURE
+                emission_sum += (Li_wj / sample_prob[i]) / len(sample_values)
+            #else:
+                # TODO: environment map
+        emission_avg = emission_sum/len(sample_values)
+        return emission_avg
 
 
 class BayesianMonteCarloIntegrator(Integrator):
