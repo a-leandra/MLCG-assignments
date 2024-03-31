@@ -164,26 +164,41 @@ class CMCIntegrator(Integrator):  # Classic Monte Carlo Integrator
         self.n_samples = n
 
     def compute_color(self, ray):
-        #color = RGBColor(0.0, 0.0, 0.0)  # Start with black, add light contributions
-        hit_data = self.scene.closest_hit(ray) # NOT SURE ABOUT THIS
-        normal = hit_data.normal
+        color = RGBColor(0.0, 0.0, 0.0)  # Start with black, add light contributions
 
-        sample_set, sample_prob = sample_set_hemisphere(ns, uniform_pdf)
-        sample_values = collect_samples(integrand, sample_set)
+        hit_data = self.scene.closest_hit(ray)
+        if not hit_data.has_hit:
+            # If the ray doesn't hit anything, return the background color
+            return self.scene.env_map.getValue(ray.d) if self.scene.env_map else BLACK
 
-        emission_sum = 0.0
-        for i in range(len(sample_values)):
-            wj = center_around_normal(sample_values[i], normal)
-            r_wj = Ray(wj)
-            r_hit_data = self.scene.closest_hit(r_wj)
+        # Assume that all objects in the scene have a BRDF directly assigned
+        hit_brdf = self.scene.object_list[hit_data.primitive_index].BRDF
 
-            if(r_hit_data.has_hit):
-                Li_wj = hit_data.hit_point.emission # NOT SURE
-                emission_sum += (Li_wj / sample_prob[i]) / len(sample_values)
-            #else:
-                # TODO: environment map
-        emission_avg = emission_sum/len(sample_values)
-        return emission_avg
+        # Generate a set of samples over the hemisphere
+        sample_set, sample_prob = sample_set_hemisphere(self.n_samples, uniform_pdf)
+        for omega_j, prob in zip(sample_set, sample_prob):
+            # Rotate sample to be around the normal at the hit point
+            omega_j_prime = center_around_normal(omega_j, hit_data.normal)
+
+            # Shoot a secondary ray from the hit point in the direction of the sample
+            secondary_ray = Ray(hit_data.hit_point, omega_j_prime)
+            secondary_hit_data = self.scene.closest_hit(secondary_ray)
+
+            if secondary_hit_data.has_hit:
+                # If the secondary ray hits the scene geometry, use the object's emission
+                Li = self.scene.object_list[secondary_hit_data.primitive_index].emission
+            else:
+                # If there's no hit, use the environment map if available
+                Li = self.scene.env_map.getValue(omega_j_prime) if self.scene.env_map else BLACK
+
+        cos_theta = max(Dot(hit_data.normal, omega_j_prime), 0)
+        brdf_value = hit_brdf.get_value(omega_j_prime, ray.d, hit_data.normal)
+        color += Li.multiply(brdf_value) * (cos_theta / prob)
+
+        # Average the color by the number of samples
+        color /= float(self.n_samples)
+
+        return color
 
 
 class BayesianMonteCarloIntegrator(Integrator):
