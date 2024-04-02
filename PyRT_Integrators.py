@@ -169,7 +169,7 @@ class CMCIntegrator(Integrator):  # Classic Monte Carlo Integrator
         hit_data = self.scene.closest_hit(ray)
         if not hit_data.has_hit:
             # If the ray doesn't hit anything, return the background color
-            return self.scene.env_map.getValue(ray.d) if self.scene.env_map else BLACK
+            return self.scene.env_map.getValue(ray.d) if self.scene.env_map else WHITE
 
         # Assume that all objects in the scene have a BRDF directly assigned
         hit_brdf = self.scene.object_list[hit_data.primitive_index].BRDF
@@ -189,11 +189,12 @@ class CMCIntegrator(Integrator):  # Classic Monte Carlo Integrator
                 Li = self.scene.object_list[secondary_hit_data.primitive_index].emission
             else:
                 # If there's no hit, use the environment map if available
-                Li = self.scene.env_map.getValue(omega_j_prime) if self.scene.env_map else BLACK
+                Li = self.scene.env_map.getValue(omega_j_prime) if self.scene.env_map else RED
 
-        cos_theta = max(Dot(hit_data.normal, omega_j_prime), 0)
-        brdf_value = hit_brdf.get_value(omega_j_prime, ray.d, hit_data.normal)
-        color += Li.multiply(brdf_value) * (cos_theta / prob)
+        #cos_theta = max(Dot(hit_data.normal, omega_j_prime), 0)
+            
+            brdf_value = hit_brdf.get_value(omega_j_prime, Vector3D(-ray.d.x, -ray.d.y, -ray.d.z), hit_data.normal)
+            color += Li.multiply(brdf_value) / prob
 
         # Average the color by the number of samples
         color /= float(self.n_samples)
