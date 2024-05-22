@@ -95,9 +95,9 @@ class GP:
         # ################## #
         # ADD YOUR CODE HERE #
         # ################## #
-        #for i in range(n):
-        #    for j in range(n):
-        #        Q[i, j] = self.cov_func.eval(self.samples_pos[i], self.samples_pos[j])
+        for i in range(n):
+            for j in range(n):
+                Q[i, j] = self.cov_func.eval(self.samples_pos[i], self.samples_pos[j])
 
 
 
@@ -134,11 +134,11 @@ class GP:
             # ################## #
             # ADD YOUR CODE HERE #
             # ################## #
-            #for i in range(ns):
-            #    z_sum = 0
-            #    for j in range(ns_z):
-            #        z_sum += self.p_func(sample_set_z[j]) / probab[j]
-            #    z_vec[i] = z_sum / ns_z
+            for i in range(ns):
+                z_sum = 0
+                for j in range(ns_z):
+                    z_sum += self.p_func(sample_set_z[j]) / probab[j]
+                z_vec[i] = z_sum / ns_z
 
 
 
@@ -152,7 +152,7 @@ class GP:
         # ################## #
         # ADD YOUR CODE HERE #
         # ################## #
-        # integral_estimate = np.dot(self.weights, self.samples_val)
+        integral_estimate = np.dot(self.weights, self.samples_val)
 
 
-        return res
+        return integral_estimate

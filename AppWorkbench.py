@@ -111,7 +111,7 @@ for k, ns in enumerate(ns_vector):
     avg_error_cmc = error_sum / n_estimates
     results[k, 0] = avg_error_cmc
 
-    avg_error_bmc = abs(ground_truth - bmc_estimate.r)
+    avg_error_bmc = abs(ground_truth - bmc_estimate)
     results[k, 1] = avg_error_bmc
 
     print(f'Average absolute error Classical Monte Carlo for {ns} samples: {avg_error_cmc}')
