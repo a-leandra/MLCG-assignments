@@ -27,10 +27,10 @@ class SobolevCov(CovarianceFunction):
 # Squared Exponential (SE) Covariance function
 # [Spherical Gaussian Framework paper (Marques et al. 2013, IEEE TVCG)]
 class SECov(CovarianceFunction):
-
     def __init__(self, l, noise):
-        super().__init__(noise)
+        # Todo: errors with the initially given constructor
         self.l = l  # Length-scale parameter (controls the smoothness of the GP model)
+        self.noise = noise  # This may be intended to manage internal noise calculations
 
     def eval(self, omega_i, omega_j):
         r = Length(omega_i - omega_j)  # Euclidean distance between the samples
@@ -95,6 +95,10 @@ class GP:
         # ################## #
         # ADD YOUR CODE HERE #
         # ################## #
+        #for i in range(n):
+        #    for j in range(n):
+        #        Q[i, j] = self.cov_func.eval(self.samples_pos[i], self.samples_pos[j])
+
 
 
         # Add a diagonal of a small amount of noise to avoid numerical instability problems
@@ -130,6 +134,12 @@ class GP:
             # ################## #
             # ADD YOUR CODE HERE #
             # ################## #
+            #for i in range(ns):
+            #    z_sum = 0
+            #    for j in range(ns_z):
+            #        z_sum += self.p_func(sample_set_z[j]) / probab[j]
+            #    z_vec[i] = z_sum / ns_z
+
 
 
 
@@ -142,6 +152,7 @@ class GP:
         # ################## #
         # ADD YOUR CODE HERE #
         # ################## #
+        # integral_estimate = np.dot(self.weights, self.samples_val)
 
 
         return res
