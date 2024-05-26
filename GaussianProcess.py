@@ -131,17 +131,13 @@ class GP:
             omega_i = self.samples_pos[i]
 
             # STEP 3.2: Use classic Monte Carlo Integration to compute z_i
-            # ################## #
-            # ADD YOUR CODE HERE #
-            # ################## #
-            for i in range(ns):
-                z_sum = 0
-                for j in range(ns_z):
-                    z_sum += self.p_func(sample_set_z[j]) / probab[j]
-                z_vec[i] = z_sum / ns_z
+            integrand_values = np.zeros(ns_z)
+            for j in range(ns_z):
+                omega_j = sample_set_z[j]
+                integrand_values[j] = self.cov_func.eval(omega_i, omega_j)
 
-
-
+            z_i = np.mean(integrand_values / probab)
+            z_vec[i] = z_i
 
         return z_vec
 
