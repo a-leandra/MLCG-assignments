@@ -1,7 +1,8 @@
 from PyRT_Common import *
 from PyRT_Core import *
-from random import randint
+from random import randint, uniform
 from AppWorkbench import *
+import numpy as np
 
 
 # -------------------------------------------------
@@ -201,13 +202,104 @@ class CMCIntegrator(Integrator):  # Classic Monte Carlo Integrator
 
         return color
 
+def rotate_around_y(pos, angle):
+    # Rotate a position vector around the Y-axis by a given angle
+    rotation_matrix = np.array([
+        [np.cos(angle), 0, np.sin(angle)],
+        [0, 1, 0],
+        [-np.sin(angle), 0, np.cos(angle)]
+    ])
+    rotated_pos = np.dot(rotation_matrix, [pos.x, pos.y, pos.z])
+    return Vector3D(rotated_pos[0], rotated_pos[1], rotated_pos[2])
+
+
+def rotate_around_normal(pos, normal):
+    # Ensure normal is a numpy array
+    normal = np.array([normal.x, normal.y, normal.z])
+    pos = np.array([pos.x, pos.y, pos.z])
+
+    # Define the up vector
+    up_vector = np.array([0, 1, 0])
+
+    if np.allclose(normal, up_vector):
+        return Vector3D(pos[0], pos[1], pos[2])  # No rotation needed if normal is already the up vector.
+
+    rotation_axis = np.cross(up_vector, normal)
+    rotation_angle = np.arccos(np.dot(up_vector, normal) / (np.linalg.norm(up_vector) * np.linalg.norm(normal)))
+    rotation_matrix = axis_angle_rotation_matrix(rotation_axis, rotation_angle)
+    rotated_pos = np.dot(rotation_matrix, pos)
+
+    return Vector3D(rotated_pos[0], rotated_pos[1], rotated_pos[2])
+
+def axis_angle_rotation_matrix(axis, angle):
+    # Create a rotation matrix given an axis and an angle
+    axis = axis / np.linalg.norm(axis)
+    cos_angle = np.cos(angle)
+    sin_angle = np.sin(angle)
+    one_minus_cos = 1.0 - cos_angle
+
+    x, y, z = axis
+    return np.array([
+        [cos_angle + x * x * one_minus_cos, x * y * one_minus_cos - z * sin_angle, x * z * one_minus_cos + y * sin_angle],
+        [y * x * one_minus_cos + z * sin_angle, cos_angle + y * y * one_minus_cos, y * z * one_minus_cos - x * sin_angle],
+        [z * x * one_minus_cos - y * sin_angle, z * y * one_minus_cos + x * sin_angle, cos_angle + z * z * one_minus_cos]
+    ])
+
 
 class BayesianMonteCarloIntegrator(Integrator):
-    def __init__(self, n, myGP, filename_, experiment_name=''):
+    def __init__(self, n, gp_list, filename_, experiment_name=''):
+        if not isinstance(gp_list, list):
+            raise TypeError("gp_list should be a list of Gaussian Process instances.")
         filename_bmc = filename_ + '_BMC_' + str(n) + '_samples' + experiment_name
         super().__init__(filename_bmc)
         self.n_samples = n
-        self.myGP = myGP
+        self.gp_list = gp_list
 
     def compute_color(self, ray):
-        pass
+        color = RGBColor(0.0, 0.0, 0.0)  # Start with black, add light contributions
+
+        hit_data = self.scene.closest_hit(ray)
+        if not hit_data.has_hit:
+            # If the ray doesn't hit anything, return the background color
+            return self.scene.env_map.getValue(ray.d) if self.scene.env_map else WHITE
+
+        # Assume that all objects in the scene have a BRDF directly assigned
+        hit_brdf = self.scene.object_list[hit_data.primitive_index].BRDF
+
+        # Select a random GP from the precomputed list
+        myGP = self.gp_list[randint(0, len(self.gp_list) - 1)]
+
+        # Apply a random rotation around the Y-axis to the sample set
+        rotation_angle = uniform(0, 2 * np.pi)
+        rotated_samples_y = [rotate_around_y(pos, rotation_angle) for pos in myGP.samples_pos]
+
+        # Rotate the sample positions to align with the normal at the hit point
+        rotated_samples = [rotate_around_normal(pos, hit_data.normal) for pos in rotated_samples_y]
+
+        # Sample the integrand using the rotated sample set
+        sample_values = []
+        for omega_j_prime in rotated_samples:
+            # Shoot a secondary ray from the hit point in the direction of the sample
+            secondary_ray = Ray(hit_data.hit_point, omega_j_prime)
+            secondary_hit_data = self.scene.closest_hit(secondary_ray)
+
+            if secondary_hit_data.has_hit:
+                # If the secondary ray hits the scene geometry, use the object's emission
+                Li = self.scene.object_list[secondary_hit_data.primitive_index].emission
+            else:
+                # If there's no hit, use the environment map if available
+                Li = self.scene.env_map.getValue(omega_j_prime) if self.scene.env_map else RGBColor(1.0, 0.0, 0.0)
+
+            brdf_value = hit_brdf.get_value(omega_j_prime, Vector3D(-ray.d.x, -ray.d.y, -ray.d.z), hit_data.normal)
+            sample_values.append(Li.multiply(brdf_value))
+
+        # Flatten the sample values to use only the red channel (or the combined color intensity if needed)
+        flattened_sample_values = [sv.r for sv in sample_values]
+
+        # Add the sample values to the Gaussian Process
+        myGP.add_sample_val(flattened_sample_values)
+
+        # Compute the integral using Bayesian Monte Carlo
+        color_value = myGP.compute_integral_BMC()
+
+        return RGBColor(color_value, 0, 0)

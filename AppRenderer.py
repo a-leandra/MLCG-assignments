@@ -1,7 +1,8 @@
 from PyRT_Core import *
 from PyRT_Integrators import *
 import time
-
+from GaussianProcess import GP, SECov  # Import the Gaussian Process and covariance functions
+import numpy as np
 
 def sphere_test_scene(areaLS=False, use_env_map=False):
     # Create a scene object
@@ -165,13 +166,33 @@ FILENAME = 'rendered_image'
 DIRECTORY = '.\\out\\'
 
 # -------------------------------------------------Main
+
+def initialize_gp(ns_samples, cov_func):
+    uniform_pdf = UniformPDF()
+    sample_set, _ = sample_set_hemisphere(ns_samples, uniform_pdf)
+    myGP = GP(cov_func=cov_func, p_func=lambda x: 1)
+    myGP.add_sample_pos(sample_set)
+    return myGP
+
+def create_gp_list(num_gps, ns_samples, cov_func):
+    return [initialize_gp(ns_samples, cov_func) for _ in range(num_gps)]
+
+# Create a Gaussian Process (GP)
+num_gps = 10
+ns_samples = 40
+
+cov_func = SECov(l=0.5, noise=0.01)
+
+gp_list = create_gp_list(num_gps, ns_samples, cov_func)
+
 # Create Integrator
 #integrator = LazyIntegrator(DIRECTORY + FILENAME)
 #integrator = IntersectionIntegrator(DIRECTORY + FILENAME)
 #integrator = DepthIntegrator(DIRECTORY + FILENAME)
 #integrator = NormalIntegrator(DIRECTORY + FILENAME)
 #integrator = PhongIntegrator(DIRECTORY + FILENAME)
-integrator = CMCIntegrator(40, DIRECTORY + FILENAME)
+#integrator = CMCIntegrator(40, DIRECTORY + FILENAME)
+integrator = BayesianMonteCarloIntegrator(ns_samples, gp_list, DIRECTORY + FILENAME)
 
 # Create the scene
 scene = sphere_test_scene(areaLS=False, use_env_map=True)
