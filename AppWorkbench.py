@@ -73,7 +73,7 @@ integrand = [l_i, brdf, cosine_term]  # l_i * brdf * cos
 # Set-up the pdf used to sample the hemisphere #
 # ############################################ #
 uniform_pdf = UniformPDF()
-exponent = 1
+exponent = 3
 cosine_pdf = CosinePDF(exponent)
 
 # ###################################################################### #
@@ -131,6 +131,8 @@ for k, ns in enumerate(ns_vector):
     results[k, 1] = avg_error_cmc_is
 
     # Bayesian Monte Carlo
+    sample_set, sample_prob = sample_set_hemisphere(ns, uniform_pdf)
+    sample_values = collect_samples(integrand, sample_set)
     cov_func = SECov(l=0.5, noise=0.01)
     gp = GP(cov_func=cov_func, p_func=lambda x: 1)
     gp.add_sample_pos(sample_set)
@@ -141,6 +143,8 @@ for k, ns in enumerate(ns_vector):
     results[k, 2] = avg_error_bmc
 
     # Bayesian Monte Carlo Importance Sampling
+    sample_set_is, sample_prob_is = sample_set_hemisphere(ns, cosine_pdf)
+    sample_values_is = collect_samples(integrand, sample_set_is)
     bmc_is_estimate = compute_estimate_bmc_is(sample_set_is, sample_values_is, gp, cosine_term)
     avg_error_bmc_is = abs(ground_truth - bmc_is_estimate)
     results[k, 3] = avg_error_bmc_is
