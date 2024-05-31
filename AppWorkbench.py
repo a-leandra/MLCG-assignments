@@ -65,7 +65,7 @@ n_methods = len(methods_label) # number of tested monte carlo methods
 l_i = Constant(1)
 kd = 1
 brdf = Constant(kd)
-cosine_term = CosineLobe(1)
+cosine_term = CosineLobe(3)
 integrand = [l_i, brdf, cosine_term]  # l_i * brdf * cos
 
 # ############################################ #
@@ -73,7 +73,7 @@ integrand = [l_i, brdf, cosine_term]  # l_i * brdf * cos
 # Set-up the pdf used to sample the hemisphere #
 # ############################################ #
 uniform_pdf = UniformPDF()
-exponent = 3
+exponent = 1
 cosine_pdf = CosinePDF(exponent)
 
 # ###################################################################### #
